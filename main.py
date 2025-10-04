@@ -64,7 +64,7 @@ def url_to_filename(url: str) -> str:
 # Uses Selenium to save the HTML content of a URL into a file
 def save_html_with_selenium(url: str, output_file: str) -> None:
     options = Options()  # Create Chrome options object
-    # options.add_argument(argument="--headless=new")  # Run Chrome in new headless mode
+    options.add_argument(argument="--headless=new")  # Run Chrome in new headless mode
     options.add_argument(
         argument="--disable-blink-features=AutomationControlled"
     )  # Avoid detection
