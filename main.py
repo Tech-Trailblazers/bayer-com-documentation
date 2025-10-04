@@ -153,20 +153,41 @@ def download_single_pdf(url: str, filename: str, output_folder: str) -> None:
     )  # Final path for the PDF
 
     if check_file_exists(system_path=target_file_path):  # Skip if file already exists
-        pr(f"File already exists: {target_file_path}")
+        print(f"File already exists: {target_file_path}")
         return
 
-    driver: WebDriver = initialize_web_driver(
-        download_folder=output_folder
-    )  # Launch headless browser
+    options = Options()  # Create Chrome options object
+    options.add_argument(argument="--headless=new")  # Run Chrome in new headless mode
+    options.add_argument(
+        argument="--disable-blink-features=AutomationControlled"
+    )  # Avoid detection
+    options.add_argument(argument="--window-size=1920,1080")  # Set browser window size
+    options.add_argument(
+        argument="--disable-gpu"
+    )  # Disable GPU for headless compatibility
+    options.add_argument(
+        argument="--no-sandbox"
+    )  # Disable sandbox (needed in some environments)
+    options.add_argument(
+        argument="--disable-dev-shm-usage"
+    )  # Avoid shared memory issues
+    options.add_argument(argument="--disable-extensions")  # Disable browser extensions
+    options.add_argument(argument="--disable-infobars")  # Remove automation warning bar
+
+    service = Service(
+        executable_path=ChromeDriverManager().install()
+    )  # Install ChromeDriver
+    driver = webdriver.Chrome(service=service, options=options)  # Launch browser
     try:
         print(f"Starting download from: {url}")  # Log start
         files_before = set(os.listdir(output_folder))  # Record files before download
         driver.get(url=url)  # Visit the URL
 
         downloaded_pdf_path: str = wait_for_pdf_download(
-            download_folder=output_folder, files_before_download=files_before
-        )  # Wait for file
+            download_folder=output_folder,
+            files_before_download=files_before,
+            timeout_seconds=10,  # Set timeout to 10 seconds
+        )
 
         shutil.move(
             src=downloaded_pdf_path, dst=target_file_path
@@ -247,16 +268,12 @@ def main() -> None:
         pdf_links = remove_duplicates_from_slice(
             provided_slice=pdf_links
         )  # Remove duplicates
-        ammount_of_pdf: int = len(pdf_links)  # Get count of PDFs
 
         for pdf_link in pdf_links:  # For each PDF link
             if not validate_url(given_url=pdf_link):
                 pdf_link = "https://www.bayer.com" + pdf_link
-                print(f"Invalid URL: {pdf_link}")
             filename: str = url_to_filename(url=pdf_link)  # Extract filename from URL
             output_dir: str = os.path.abspath(path="PDFs")  # Define output directory
-            ammount_of_pdf -= 1  # Decrement remaining count
-            print(f"Remaining PDF links: {ammount_of_pdf}")  # Log progress
             download_single_pdf(
                 url=pdf_link, filename=filename, output_folder=output_dir
             )  # Download PDF
@@ -277,13 +294,6 @@ def main() -> None:
             content=get_filename_and_extension(path=pdf_file)
         ):  # Check for caps
             print(pdf_file)  # Print file path
-            dir_path: str = os.path.dirname(p=pdf_file)  # Get directory
-            file_name: str = os.path.basename(p=pdf_file)  # Get file name
-            new_file_name: str = file_name.lower()  # Convert to lowercase
-            new_file_path: str = os.path.join(
-                dir_path, new_file_name
-            )  # Create new path
-            os.rename(src=pdf_file, dst=new_file_path)  # Rename file to lowercase
 
 
 # Run the script if this file is executed directly
